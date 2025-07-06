@@ -114,9 +114,17 @@ async def vertex_list_models(request: Request,
 async def list_models(request: Request,
                       _ = Depends(custom_verify_password),
                       _2 = Depends(verify_user_agent)):
+    model_list = None
     if settings.ENABLE_VERTEX:
-        return await vertex_list_models(request, _, _2)
-    return await aistudio_list_models(_, _2)
+        model_list = await vertex_list_models(request, _, _2)
+    else:
+        model_list = await aistudio_list_models(_, _2)
+
+    # 在返回之前过滤掉ID为空的模型
+    if model_list and model_list.data:
+        model_list.data = [model for model in model_list.data if model.get('id')]
+
+    return model_list
 
 @router.post("/aistudio/chat/completions", response_model=ChatCompletionResponse)
 async def aistudio_chat_completions(
